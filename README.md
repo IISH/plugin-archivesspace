@@ -10,14 +10,10 @@ Because of this, all clients ( VuFind, Mint, etc.) will not break.
 
 ## Installation
 
-To build the plugin run:
-
-    ./make.sh
-
-And look in the `target` folder for the plugin `iisg`. Place `iisg` in the Archivematica `plugins` folder.
+Place `iisg` in the Archivematica `plugins` folder.
 
 Ensure the plugin is registered in the config.rb file:
     
     AppConfig[:plugins] = ['iisg']
 
-And restart archivesspace.
+And restart Archivesspace.
