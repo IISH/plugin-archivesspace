@@ -157,6 +157,23 @@ class EADSerializer < ASpaceExport::Serializer
 
           xml.did {
 
+            if (val = data.title)
+              xml.unittitle({:label=>'Title', :encodinganalog=>'245$a'})  {   sanitize_mixed_content(val, xml, @fragments) }
+            end
+
+            serialize_dates(data, xml, @fragments)
+
+            xml.unitid (0..3).map{|i| data.send("id_#{i}")}.compact.join('.')
+
+            if @include_unpublished
+              data.external_ids.each do |exid|
+                xml.unitid  ({ "audience" => "internal", "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
+              end
+            end
+
+            serialize_origination(data, xml, @fragments)
+
+            serialize_extents(data, xml, @fragments)
 
             if (val = data.language)
               xml.langmaterial {
@@ -171,24 +188,6 @@ class EADSerializer < ASpaceExport::Serializer
                 xml.corpname { sanitize_mixed_content(val, xml, @fragments) }
               }
             end
-
-            if (val = data.title)
-              xml.unittitle  {   sanitize_mixed_content(val, xml, @fragments) }
-            end
-
-            serialize_origination(data, xml, @fragments)
-
-            xml.unitid (0..3).map{|i| data.send("id_#{i}")}.compact.join('.')
-
-            if @include_unpublished
-              data.external_ids.each do |exid|
-                xml.unitid  ({ "audience" => "internal", "type" => exid['source'], "identifier" => exid['external_id']}) { xml.text exid['external_id']}
-              end
-            end
-
-            serialize_extents(data, xml, @fragments)
-
-            serialize_dates(data, xml, @fragments)
 
             serialize_did_notes(data, xml, @fragments)
 
@@ -726,7 +725,7 @@ class EADSerializer < ASpaceExport::Serializer
                       :dateencoding => "iso8601",
                       :langencoding => "iso639-2b"}.reject{|k,v| v.nil? || v.empty? || v == "null"}
 
-    xml.eadheader(eadheader_atts) {
+    xml.eadheader(eadheader_atts) { #<eadheader findaidstatus="" repositoryencoding="iso15511"
 
       eadid_atts = {:countrycode => data.repo.country,
               :url => data.ead_location,
