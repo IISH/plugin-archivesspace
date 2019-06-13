@@ -285,7 +285,7 @@ class EADSerializer < ASpaceExport::Serializer
 
     tag_name = @use_numbered_c_tags ? :"c#{c_depth.to_s.rjust(2, '0')}" : :c
 
-    atts = {:level => data.level, :otherlevel => data.other_level, :id => prefix_id(data.ref_id)}
+		atts = {:level => data.level, :otherlevel => data.other_level, :id => prefix_id(data.ref_id)}
 
     if data.publish === false
       atts[:audience] = 'internal'
@@ -356,6 +356,11 @@ class EADSerializer < ASpaceExport::Serializer
 
   def serialize_origination(data, xml, fragments)
     unless data.creators_and_sources.nil?
+
+			# added by gcu
+			firstpersname = 1
+			firstcorpname = 1
+
       data.creators_and_sources.each do |link|
         agent = link['_resolved']
         published = agent['publish'] === true
@@ -379,15 +384,28 @@ class EADSerializer < ASpaceExport::Serializer
         xml.origination(origination_attrs) {
 
 				# added by gcu
-				 encodinganalog = case node_name
-										 when 'persname'; '100$a'
-										 when 'corpname'; '110$a'
-										 end
+				if node_name == 'persname'
+					if firstpersname == 1
+						encodinganalog = '100$a'
+					else
+						encodinganalog = '700$a'
+					end
+					firstpersname = 0
+				elsif node_name == 'corpname'
+					if firstcorpname == 1
+						encodinganalog = '110$a'
+					else
+						encodinganalog = '710$a'
+					end
+					firstcorpname = 0
+				else
+					encodinganalog = ''
+				end
 
-					# modified by gcu
-				 atts = {:role => relator, :source => source, :rules => rules, :authfilenumber => authfilenumber}
-				 atts = {:role => relator, :source => source, :rules => rules, :authfilenumber => authfilenumber, :encodinganalog => encodinganalog}
-         atts.reject! {|k, v| v.nil?}
+				  # modified by gcu
+				  #atts = {:role => relator, :source => source, :rules => rules, :authfilenumber => authfilenumber}
+				  atts = {:role => relator, :source => source, :rules => rules, :authfilenumber => authfilenumber, :encodinganalog => encodinganalog}
+          atts.reject! {|k, v| v.nil?}
 
           xml.send(node_name, atts) {
             sanitize_mixed_content(sort_name, xml, fragments )
@@ -680,7 +698,25 @@ class EADSerializer < ASpaceExport::Serializer
     audatt = note["publish"] === false ? {:audience => 'internal'} : {}
     content = note["content"]
 
-    atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
+		# added by gcu
+		encodinganalog = ''
+		if note['type'] == 'bioghist'
+			encodinganalog = '545$a'
+		elsif note['type'] == 'custodhist'
+			encodinganalog = '561$a'
+		elsif note['type'] == 'acqinfo'
+			encodinganalog = '541$a'
+		elsif note['type'] == 'scopecontent'
+			encodinganalog = '520$a'
+		elsif note['type'] == 'arrangement'
+			encodinganalog = '351$b'
+		elsif note['type'] == 'processinfo'
+			encodinganalog = '583$a'
+		end
+
+		# modified by gcu
+		#atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
+		atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt).merge({ :encodinganalog => encodinganalog })
 
     head_text = note['label'] ? note['label'] : I18n.t("enumerations._note_types.#{note['type']}", :default => note['type'])
     content, head_text = extract_head_text(content, head_text)
@@ -720,7 +756,7 @@ class EADSerializer < ASpaceExport::Serializer
       head_text = note['label'] ? note['label'] : I18n.t("enumerations._note_types.#{note_type}", :default => note_type )
       audatt = note["publish"] === false ? {:audience => 'internal'} : {}
 
-      atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
+			atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
 
       xml.bibliography(atts) {
         xml.head { sanitize_mixed_content(head_text, xml, fragments) }
