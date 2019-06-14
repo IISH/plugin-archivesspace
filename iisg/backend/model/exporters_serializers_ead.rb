@@ -167,6 +167,7 @@ class EADSerializer < ASpaceExport::Serializer
 						# added by gcu
 						attributes = {:countrycode => data.repo.country,
 										:label => 'Collection no.',
+										:encodinganalog => '852$j',
 										:repositorycode => data.mainagencycode}.reject{|k,v| v.nil? || v.empty? || v == "null" }
 
 						# modified by gcu
@@ -183,6 +184,23 @@ class EADSerializer < ASpaceExport::Serializer
 
             serialize_extents(data, xml, @fragments)
 
+						# test gcu
+						# todo waar moet dit komen?
+						xml.TESTaddress {
+							xml.addressline {
+								xml.text 'Cruquiusweg 31'
+							}
+							xml.addressline {
+								xml.text 'Amsterdam 1019 AT'
+							}
+							xml.addressline {
+								xml.text 'e-mail: etu@iisg.nl'
+							}
+							xml.addressline {
+								xml.text 'URL: https://iisg.amsterdam'''
+							}
+						}
+
             if (val = data.language)
 							# modified by gcu
 							#xml.langmaterial {
@@ -193,7 +211,7 @@ class EADSerializer < ASpaceExport::Serializer
 								xml.language({:langcode => val, :encodinganalog => '041$a'}) {
 									# added by gcu
                 	taal = I18n.t("enumerations.language_iso639_2.#{val}", :default => val)
-									taal = taal.sub('; Flemish', '')
+									taal = taal.sub('Dutch; Flemish', 'Dutch')
 
 									# modified by gcu
 									#xml.text I18n.t("enumerations.language_iso639_2.#{val}", :default => val)
@@ -417,23 +435,120 @@ class EADSerializer < ASpaceExport::Serializer
 
   def serialize_controlaccess(data, xml, fragments)
     if (data.controlaccess_subjects.length + data.controlaccess_linked_agents.length) > 0
-      xml.controlaccess {
 
-        data.controlaccess_subjects.each do |node_data|
-          xml.send(node_data[:node_name], node_data[:atts]) {
-            sanitize_mixed_content( node_data[:content], xml, fragments, ASpaceExport::Utils.include_p?(node_data[:node_name]) )
-          }
-        end
+			# find all types
+			arr_items = []
+			data.controlaccess_subjects.each do |item|
+				arr_items.push(item[:node_name])
+			end
+			arr_items = arr_items.uniq
+
+			# loop each type
+			arr_items.each do |item|
+
+				xml.controlaccess {
+
+					xml.head {
+						txthead = case item
+											when 'geogname'
+											  'Geographic Names'
+											when 'subject'
+												'Themes'
+											when 'genreform'
+												'Material Type'
+											else
+												''
+											end
+
+						xml.text txthead
+					}
+
+					#
+					firstgeogname = 1
+
+					data.controlaccess_subjects.each do |node_data|
+
+						if item == node_data[:node_name]
+
+						# added by gcu
+						if node_data[:node_name] == 'geogname'
+							if firstgeogname == 1
+								node_data[:atts][:encodinganalog] = '044$c'
+								node_data[:atts][:role] = 'country of origin'
+								node_data[:atts][:normal] = 'NL'
+							else
+								node_data[:atts][:encodinganalog] = '651$a'
+								node_data[:atts][:role] = 'subject'
+								node_data[:atts][:normal] = 'AT'
+							end
+							firstgeogname = 0
+						elsif node_data[:node_name] == 'subject'
+							node_data[:atts][:encodinganalog] = '650$a'
+						elsif node_data[:node_name] == 'genreform'
+							node_data[:atts][:encodinganalog] = '655$a'
+						else
+							node_data[:atts][:unknownnodename] = node_data[:node_name]
+						end
+
+						xml.send(node_data[:node_name], node_data[:atts]) {
+							sanitize_mixed_content( node_data[:content], xml, fragments, ASpaceExport::Utils.include_p?(node_data[:node_name]) )
+						}
+						end
+					end
+
+				} #</controlaccess>
+
+			end
 
 
-        data.controlaccess_linked_agents.each do |node_data|
-          xml.send(node_data[:node_name], node_data[:atts]) {
-            sanitize_mixed_content( node_data[:content], xml, fragments,ASpaceExport::Utils.include_p?(node_data[:node_name]) )
-          }
-        end
+			# find all types
+			arr_items = []
+			data.controlaccess_linked_agents.each do |item|
+				arr_items.push(item[:node_name])
+			end
+			arr_items = arr_items.uniq
 
-      } #</controlaccess>
-    end
+			# loop each type
+			arr_items.each do |item|
+
+				xml.controlaccess {
+
+					xml.head {
+						txthead = case item
+											when 'persname'
+												'Persons'
+											when 'corpname'
+												'Organizations'
+											else
+												''
+											end
+
+						xml.text txthead
+					}
+
+					data.controlaccess_linked_agents.each do |node_data|
+
+						if item == node_data[:node_name]
+
+							if node_data[:node_name] == 'persname'
+								node_data[:atts][:encodinganalog] = '600$a'
+								node_data[:atts][:role] = 'subject'
+							elsif node_data[:node_name] == 'corpname'
+								node_data[:atts][:encodinganalog] = '610$a'
+								node_data[:atts][:role] = 'subject'
+							end
+
+							xml.send(node_data[:node_name], node_data[:atts]) {
+								sanitize_mixed_content( node_data[:content], xml, fragments,ASpaceExport::Utils.include_p?(node_data[:node_name]) )
+							}
+
+						end
+
+					end
+
+				} #</controlaccess>
+			end
+		end
   end
 
   def serialize_subnotes(subnotes, xml, fragments, include_p = true)
@@ -685,7 +800,12 @@ class EADSerializer < ASpaceExport::Serializer
         xml.send(note['type'], att.merge(audatt)) {
           sanitize_mixed_content(content, xml, fragments,ASpaceExport::Utils.include_p?(note['type']))
         }
-      else
+			else
+				if note['type'] == 'abstract'
+					att[:encodinganalog] = '520$a'
+					att[:label] = 'Abstract'
+				end
+
         xml.send(note['type'], att.merge(audatt)) {
           sanitize_mixed_content(content, xml, fragments,ASpaceExport::Utils.include_p?(note['type']))
         }
@@ -698,25 +818,59 @@ class EADSerializer < ASpaceExport::Serializer
     audatt = note["publish"] === false ? {:audience => 'internal'} : {}
     content = note["content"]
 
-		# added by gcu
-		encodinganalog = ''
-		if note['type'] == 'bioghist'
-			encodinganalog = '545$a'
-		elsif note['type'] == 'custodhist'
-			encodinganalog = '561$a'
-		elsif note['type'] == 'acqinfo'
-			encodinganalog = '541$a'
-		elsif note['type'] == 'scopecontent'
-			encodinganalog = '520$a'
-		elsif note['type'] == 'arrangement'
-			encodinganalog = '351$b'
-		elsif note['type'] == 'processinfo'
-			encodinganalog = '583$a'
-		end
+		# # added by gcu
+		# encodinganalog = ''
+		# if note['type'] == 'bioghist'
+		# 	encodinganalog = '545$a'
+		# elsif note['type'] == 'custodhist'
+		# 	encodinganalog = '561$a'
+		# elsif note['type'] == 'acqinfo'
+		# 	encodinganalog = '541$a'
+		# elsif note['type'] == 'scopecontent'
+		# 	encodinganalog = '520$a'
+		# elsif note['type'] == 'arrangement'
+		# 	encodinganalog = '351$b'
+		# elsif note['type'] == 'processinfo'
+		# 	encodinganalog = '583$a'
+		# elsif note['type'] == 'accessrestrict'
+		# 	encodinganalog = '506$a'
+		# elsif note['type'] == 'userestrict'
+		# 	encodinganalog = '540$a'
+		# end
 
 		# modified by gcu
-		#atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
-		atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt).merge({ :encodinganalog => encodinganalog })
+		atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
+		#atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt).merge({ :encodinganalog => encodinganalog })
+
+		# added by gcu
+		#encodinganalog = ''
+		if note['type'] == 'bioghist'
+			atts[:encodinganalog] = '545$a'
+		elsif note['type'] == 'custodhist'
+			atts[:encodinganalog] = '561$a'
+		elsif note['type'] == 'acqinfo'
+			atts[:encodinganalog] = '541$a'
+		elsif note['type'] == 'scopecontent'
+			atts[:encodinganalog] = '520$a'
+		elsif note['type'] == 'arrangement'
+			atts[:encodinganalog] = '351$b'
+		elsif note['type'] == 'processinfo'
+			atts[:encodinganalog] = '583$a'
+		elsif note['type'] == 'accessrestrict'
+			atts[:encodinganalog] = '506$a'
+		elsif note['type'] == 'userestrict'
+			atts[:encodinganalog] = '540$a'
+		elsif note['type'] == 'prefercite'
+			atts[:encodinganalog] = '524$a'
+		elsif note['type'] == 'relatedmaterial'
+			atts[:encodinganalog] = '544$a'
+		elsif note['type'] == 'separatedmaterial'
+			atts[:encodinganalog] = '544$d'
+		elsif note['type'] == 'originalsloc'
+			atts[:encodinganalog] = '535$a'
+		elsif note['type'] == 'altformavail'
+			atts[:encodinganalog] = '530$a'
+		end
 
     head_text = note['label'] ? note['label'] : I18n.t("enumerations._note_types.#{note['type']}", :default => note['type'])
     content, head_text = extract_head_text(content, head_text)
