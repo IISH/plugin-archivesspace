@@ -164,12 +164,13 @@ class EADSerializer < ASpaceExport::Serializer
 
             serialize_dates(data, xml, @fragments)
 
-						# added by gcu
+						# added
 						attributes = {:countrycode => data.repo.country,
 										:label => 'Collection no.',
+										:encodinganalog => '852$j',
 										:repositorycode => data.mainagencycode}.reject{|k,v| v.nil? || v.empty? || v == "null" }
 
-						# modified by gcu
+						# modified
 						#xml.unitid (0..3).map{|i| data.send("id_#{i}")}.compact.join('.') # ORIGINAL
 						xml.unitid (attributes) { sanitize_mixed_content((0..3).map{|i| data.send("id_#{i}")}.compact.join('.'), xml, @fragments) }
 
@@ -184,18 +185,18 @@ class EADSerializer < ASpaceExport::Serializer
             serialize_extents(data, xml, @fragments)
 
             if (val = data.language)
-							# modified by gcu
+							# modified
 							#xml.langmaterial {
 							xml.langmaterial({:label => 'Language of Material', :encodinganalog => '546$a'}) {
 
-								# modified by gcu
+								# modified
 								#xml.language(:langcode => val) {
 								xml.language({:langcode => val, :encodinganalog => '041$a'}) {
-									# added by gcu
+									# added
                 	taal = I18n.t("enumerations.language_iso639_2.#{val}", :default => val)
-									taal = taal.sub('; Flemish', '')
+									taal = taal.sub('Dutch; Flemish', 'Dutch')
 
-									# modified by gcu
+									# modified
 									#xml.text I18n.t("enumerations.language_iso639_2.#{val}", :default => val)
 									xml.text taal
                 }
@@ -203,10 +204,29 @@ class EADSerializer < ASpaceExport::Serializer
             end
 
             if (val = data.repo.name)
-            	# modified by gcu
+            	# modified
 							#xml.repository {
 							xml.repository ({:label=>'Repository',:encodinganalog=>'852$a'}) {
                 xml.corpname { sanitize_mixed_content(val, xml, @fragments) }
+
+								#added
+								xml.address {
+									xml.addressline {
+										xml.text 'Cruquiusweg 31'
+									}
+									xml.addressline {
+										xml.text '1019 AT  Amsterdam'
+									}
+									xml.addressline {
+										xml.text 'Nederland'
+									}
+									xml.addressline {
+										xml.text 'etu@iisg.nl'
+									}
+									xml.addressline {
+										sanitize_mixed_content('URL: <extptr xlink:href="https://socialhistory.org/en" xlink:show="new" xlink:title="https://socialhistory.org/en" xlink:type="simple"/>', xml, @fragments)
+									}
+								}
               }
             end
 
@@ -234,7 +254,9 @@ class EADSerializer < ASpaceExport::Serializer
 
           EADSerializer.run_serialize_step(data, xml, @fragments, :archdesc)
 
-          xml.dsc {
+					# modified
+					#xml.dsc {
+					xml.dsc ({:type => 'combined'}) {
 
             data.children_indexes.each do |i|
               xml.text(
@@ -337,6 +359,7 @@ class EADSerializer < ASpaceExport::Serializer
 
       EADSerializer.run_serialize_step(data, xml, fragments, :archdesc)
 
+			# recursive
       data.children_indexes.each do |i|
         xml.text(
                  @stream_handler.buffer {|xml, new_fragments|
@@ -357,7 +380,7 @@ class EADSerializer < ASpaceExport::Serializer
   def serialize_origination(data, xml, fragments)
     unless data.creators_and_sources.nil?
 
-			# added by gcu
+			# added
 			firstpersname = 1
 			firstcorpname = 1
 
@@ -383,7 +406,7 @@ class EADSerializer < ASpaceExport::Serializer
         origination_attrs[:audience] = 'internal' unless published
         xml.origination(origination_attrs) {
 
-				# added by gcu
+				# added
 				if node_name == 'persname'
 					if firstpersname == 1
 						encodinganalog = '100$a'
@@ -402,7 +425,7 @@ class EADSerializer < ASpaceExport::Serializer
 					encodinganalog = ''
 				end
 
-				  # modified by gcu
+				  # modified
 				  #atts = {:role => relator, :source => source, :rules => rules, :authfilenumber => authfilenumber}
 				  atts = {:role => relator, :source => source, :rules => rules, :authfilenumber => authfilenumber, :encodinganalog => encodinganalog}
           atts.reject! {|k, v| v.nil?}
@@ -417,23 +440,120 @@ class EADSerializer < ASpaceExport::Serializer
 
   def serialize_controlaccess(data, xml, fragments)
     if (data.controlaccess_subjects.length + data.controlaccess_linked_agents.length) > 0
-      xml.controlaccess {
 
-        data.controlaccess_subjects.each do |node_data|
-          xml.send(node_data[:node_name], node_data[:atts]) {
-            sanitize_mixed_content( node_data[:content], xml, fragments, ASpaceExport::Utils.include_p?(node_data[:node_name]) )
-          }
-        end
+			# find all types
+			arr_items = []
+			data.controlaccess_subjects.each do |item|
+				arr_items.push(item[:node_name])
+			end
+			arr_items = arr_items.uniq
+
+			# loop each type
+			arr_items.each do |item|
+
+				xml.controlaccess {
+
+					xml.head {
+						txthead = case item
+											when 'geogname'
+											  'Geographic Names'
+											when 'subject'
+												'Themes'
+											when 'genreform'
+												'Material Type'
+											else
+												''
+											end
+
+						xml.text txthead
+					}
+
+					#
+					firstgeogname = 1
+
+					data.controlaccess_subjects.each do |node_data|
+
+						if item == node_data[:node_name]
+
+						# added
+						if node_data[:node_name] == 'geogname'
+							if firstgeogname == 1
+								node_data[:atts][:encodinganalog] = '044$c'
+								node_data[:atts][:role] = 'country of origin'
+								node_data[:atts][:normal] = 'NL' # TODO moet dit berekend worden
+							else
+								node_data[:atts][:encodinganalog] = '651$a'
+								node_data[:atts][:role] = 'subject'
+								node_data[:atts][:normal] = 'AT' # TODO moet dit berekend worden
+							end
+							firstgeogname = 0
+						elsif node_data[:node_name] == 'subject'
+							node_data[:atts][:encodinganalog] = '650$a'
+						elsif node_data[:node_name] == 'genreform'
+							node_data[:atts][:encodinganalog] = '655$a'
+						else
+							node_data[:atts][:unknownnodename] = node_data[:node_name]
+						end
+
+						xml.send(node_data[:node_name], node_data[:atts]) {
+							sanitize_mixed_content( node_data[:content], xml, fragments, ASpaceExport::Utils.include_p?(node_data[:node_name]) )
+						}
+						end
+					end
+
+				} #</controlaccess>
+
+			end
 
 
-        data.controlaccess_linked_agents.each do |node_data|
-          xml.send(node_data[:node_name], node_data[:atts]) {
-            sanitize_mixed_content( node_data[:content], xml, fragments,ASpaceExport::Utils.include_p?(node_data[:node_name]) )
-          }
-        end
+			# find all types
+			arr_items = []
+			data.controlaccess_linked_agents.each do |item|
+				arr_items.push(item[:node_name])
+			end
+			arr_items = arr_items.uniq
 
-      } #</controlaccess>
-    end
+			# loop each type
+			arr_items.each do |item|
+
+				xml.controlaccess {
+
+					xml.head {
+						txthead = case item
+											when 'persname'
+												'Persons'
+											when 'corpname'
+												'Organizations'
+											else
+												''
+											end
+
+						xml.text txthead
+					}
+
+					data.controlaccess_linked_agents.each do |node_data|
+
+						if item == node_data[:node_name]
+
+							if node_data[:node_name] == 'persname'
+								node_data[:atts][:encodinganalog] = '600$a'
+								node_data[:atts][:role] = 'subject'
+							elsif node_data[:node_name] == 'corpname'
+								node_data[:atts][:encodinganalog] = '610$a'
+								node_data[:atts][:role] = 'subject'
+							end
+
+							xml.send(node_data[:node_name], node_data[:atts]) {
+								sanitize_mixed_content( node_data[:content], xml, fragments,ASpaceExport::Utils.include_p?(node_data[:node_name]) )
+							}
+
+						end
+
+					end
+
+				} #</controlaccess>
+			end
+		end
   end
 
   def serialize_subnotes(subnotes, xml, fragments, include_p = true)
@@ -611,30 +731,33 @@ class EADSerializer < ASpaceExport::Serializer
         next if e["publish"] === false && !@include_unpublished
 				audatt = e["publish"] === false ? {:audience => 'internal'} : {}
 
-				# added by gcu
+				# added
 				audatt = audatt.merge({:label => 'Physical Description'})
 
         xml.physdesc({:altrender => e['portion']}.merge(audatt)) {
-          if e['number'] && e['extent_type']
+					# added
+#        	xml.extent {
+						if e['number'] && e['extent_type']
 
-						# added by gcu
-						attrs = {:altrender => 'materialtype spaceoccupied'}
-						attrs = attrs.merge({:encodinganalog => '300$a'})
+							# added
+							attrs = {:altrender => 'materialtype spaceoccupied'}
+							attrs = attrs.merge({:encodinganalog => '300$a'})
 
-						# modified by gcu
-						#xml.extent({:altrender => 'materialtype spaceoccupied'}) {
-						xml.extent( attrs ) {
-              sanitize_mixed_content("#{e['number']} #{I18n.t('enumerations.extent_extent_type.'+e['extent_type'], :default => e['extent_type'])}", xml, fragments)
-            }
-          end
-          if e['container_summary']
-            xml.extent({:altrender => 'carrier'}) {
-              sanitize_mixed_content( e['container_summary'], xml, fragments)
-            }
-          end
-          xml.physfacet { sanitize_mixed_content(e['physical_details'],xml, fragments) } if e['physical_details']
-          xml.dimensions  {   sanitize_mixed_content(e['dimensions'],xml, fragments) }  if e['dimensions']
-        }
+							# modified
+							#xml.extent({:altrender => 'materialtype spaceoccupied'}) {
+							xml.extent( attrs ) {
+								sanitize_mixed_content("#{e['number']} #{I18n.t('enumerations.extent_extent_type.'+e['extent_type'], :default => e['extent_type'])}", xml, fragments)
+							}
+						end
+						if e['container_summary']
+							xml.extent({:altrender => 'carrier'}) {
+								sanitize_mixed_content( e['container_summary'], xml, fragments)
+							}
+						end
+						xml.physfacet { sanitize_mixed_content(e['physical_details'],xml, fragments) } if e['physical_details']
+						xml.dimensions  {   sanitize_mixed_content(e['dimensions'],xml, fragments) }  if e['dimensions']
+#					}
+				}
       end
     end
   end
@@ -645,13 +768,13 @@ class EADSerializer < ASpaceExport::Serializer
       next if node_data["publish"] === false && !@include_unpublished
 			audatt = node_data["publish"] === false ? {:audience => 'internal'} : {}
 
-			# added by gcu
+			# added
 			encodinganalog = {:encodinganalog=>'245$g'}
 			attributes = {}
 			attributes = attributes.merge(audatt);
 			attributes = attributes.merge(encodinganalog);
 
-			# modified by gcu
+			# modified
 			#xml.unitdate(node_data[:atts].merge(audatt)){
 			xml.unitdate(node_data[:atts].merge(attributes)){
         sanitize_mixed_content( node_data[:content],xml, fragments )
@@ -685,7 +808,19 @@ class EADSerializer < ASpaceExport::Serializer
         xml.send(note['type'], att.merge(audatt)) {
           sanitize_mixed_content(content, xml, fragments,ASpaceExport::Utils.include_p?(note['type']))
         }
-      else
+			else
+				#
+				if note['type'] == 'abstract'
+					att[:encodinganalog] = '520$a'
+					att[:label] = 'Abstract'
+				end
+
+			  #
+				if note['type'] == 'langmaterial'
+					att[:encodinganalog] = '546$a'
+					att[:label] = 'Language of Material'
+				end
+
         xml.send(note['type'], att.merge(audatt)) {
           sanitize_mixed_content(content, xml, fragments,ASpaceExport::Utils.include_p?(note['type']))
         }
@@ -698,25 +833,36 @@ class EADSerializer < ASpaceExport::Serializer
     audatt = note["publish"] === false ? {:audience => 'internal'} : {}
     content = note["content"]
 
-		# added by gcu
-		encodinganalog = ''
-		if note['type'] == 'bioghist'
-			encodinganalog = '545$a'
-		elsif note['type'] == 'custodhist'
-			encodinganalog = '561$a'
-		elsif note['type'] == 'acqinfo'
-			encodinganalog = '541$a'
-		elsif note['type'] == 'scopecontent'
-			encodinganalog = '520$a'
-		elsif note['type'] == 'arrangement'
-			encodinganalog = '351$b'
-		elsif note['type'] == 'processinfo'
-			encodinganalog = '583$a'
-		end
+		atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
 
-		# modified by gcu
-		#atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
-		atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt).merge({ :encodinganalog => encodinganalog })
+		# added
+		if note['type'] == 'bioghist'
+			atts[:encodinganalog] = '545$a'
+		elsif note['type'] == 'custodhist'
+			atts[:encodinganalog] = '561$a'
+		elsif note['type'] == 'acqinfo'
+			atts[:encodinganalog] = '541$a'
+		elsif note['type'] == 'scopecontent'
+			atts[:encodinganalog] = '520$a'
+		elsif note['type'] == 'arrangement'
+			atts[:encodinganalog] = '351$b'
+		elsif note['type'] == 'processinfo'
+			atts[:encodinganalog] = '583$a'
+		elsif note['type'] == 'accessrestrict'
+			atts[:encodinganalog] = '506$a'
+		elsif note['type'] == 'userestrict'
+			atts[:encodinganalog] = '540$a'
+		elsif note['type'] == 'prefercite'
+			atts[:encodinganalog] = '524$a'
+		elsif note['type'] == 'relatedmaterial'
+			atts[:encodinganalog] = '544$a'
+		elsif note['type'] == 'separatedmaterial'
+			atts[:encodinganalog] = '544$d'
+		elsif note['type'] == 'originalsloc'
+			atts[:encodinganalog] = '535$a'
+		elsif note['type'] == 'altformavail'
+			atts[:encodinganalog] = '530$a'
+		end
 
     head_text = note['label'] ? note['label'] : I18n.t("enumerations._note_types.#{note['type']}", :default => note['type'])
     content, head_text = extract_head_text(content, head_text)
@@ -816,7 +962,7 @@ class EADSerializer < ASpaceExport::Serializer
 
       eadid_atts = {:countrycode => data.repo.country,
               :url => data.ead_location,
-							:identifier => data.ead_id, # added by gcu
+							:identifier => data.ead_id, # added
               :mainagencycode => data.mainagencycode}.reject{|k,v| v.nil? || v.empty? || v == "null"
                }
 
