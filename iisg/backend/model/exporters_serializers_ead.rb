@@ -221,10 +221,10 @@ class EADSerializer < ASpaceExport::Serializer
 										xml.text 'Nederland'
 									}
 									xml.addressline {
-										xml.text 'etu@iisg.nl'
+										xml.text 'ask@iisg.nl'
 									}
 									xml.addressline {
-										sanitize_mixed_content('URL: <extptr xlink:href="https://socialhistory.org/en" xlink:show="new" xlink:title="https://socialhistory.org/en" xlink:type="simple"/>', xml, @fragments)
+										sanitize_mixed_content('URL: <extptr xlink:href="https://iisg.amsterdam/en" xlink:show="new" xlink:title="https://iisg.amsterdam/en" xlink:type="simple"/>', xml, @fragments)
 									}
 								}
               }
