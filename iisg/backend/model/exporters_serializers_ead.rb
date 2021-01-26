@@ -68,15 +68,15 @@ class EADSerializer < ASpaceExport::Serializer
 
 
   def handle_linebreaks(content)
-    # 4archon... 
-    content.gsub!("\n\t", "\n\n")  
+    # 4archon...
+    content.gsub!("\n\t", "\n\n")
     # if there's already p tags, just leave as is
     return content if ( content.strip =~ /^<p(\s|\/|>)/ or content.strip.length < 1 )
     original_content = content
     blocks = content.split("\n\n").select { |b| !b.strip.empty? }
     if blocks.length > 1
-      content = blocks.inject("") do |c,n| 
-        c << "<p>#{escape_content(n.chomp)}</p>"  
+      content = blocks.inject("") do |c,n|
+        c << "<p>#{escape_content(n.chomp)}</p>"
       end
     else
       content = "<p>#{escape_content(content.strip)}</p>"
@@ -254,9 +254,9 @@ class EADSerializer < ASpaceExport::Serializer
 
           EADSerializer.run_serialize_step(data, xml, @fragments, :archdesc)
 
-					# modified
-					#xml.dsc {
-					xml.dsc ({:type => 'combined'}) {
+            # modified
+            #xml.dsc {
+            xml.dsc ({:type => 'combined'}) {
 
             data.children_indexes.each do |i|
               xml.text(
@@ -307,7 +307,7 @@ class EADSerializer < ASpaceExport::Serializer
 
     tag_name = @use_numbered_c_tags ? :"c#{c_depth.to_s.rjust(2, '0')}" : :c
 
-		atts = {:level => data.level, :otherlevel => data.other_level, :id => prefix_id(data.ref_id)}
+    atts = {:level => data.level, :otherlevel => data.other_level, :id => prefix_id(data.ref_id)}
 
     if data.publish === false
       atts[:audience] = 'internal'
@@ -359,7 +359,6 @@ class EADSerializer < ASpaceExport::Serializer
 
       EADSerializer.run_serialize_step(data, xml, fragments, :archdesc)
 
-			# recursive
       data.children_indexes.each do |i|
         xml.text(
                  @stream_handler.buffer {|xml, new_fragments|
@@ -655,7 +654,7 @@ class EADSerializer < ASpaceExport::Serializer
 
   # set daoloc audience attr == 'internal' if this is an unpublished && include_unpublished is set
   def get_audience_flag_for_file_version(file_version)
-    if file_version['file_uri'] && 
+    if file_version['file_uri'] &&
        (file_version['publish'] == false && @include_unpublished)
       return "internal"
     else
@@ -667,7 +666,7 @@ class EADSerializer < ASpaceExport::Serializer
     return if digital_object["publish"] === false && !@include_unpublished
     return if digital_object["suppressed"] === true
 
-    # ANW-285: Only serialize file versions that are published, unless include_unpublished flag is set 
+    # ANW-285: Only serialize file versions that are published, unless include_unpublished flag is set
     file_versions_to_display = digital_object['file_versions'].select {|fv| fv['publish'] == true || @include_unpublished }
 
     title = digital_object['title']
@@ -704,7 +703,7 @@ class EADSerializer < ASpaceExport::Serializer
       atts['xlink:actuate'] = file_version['xlink_actuate_attribute'] || 'onRequest'
       atts['xlink:show'] = file_version['xlink_show_attribute'] || 'new'
       atts['xlink:role'] = file_version['use_statement'] if file_version['use_statement']
-      atts['xlink:href'] = file_version['file_uri'] 
+      atts['xlink:href'] = file_version['file_uri']
       atts['xlink:audience'] = get_audience_flag_for_file_version(file_version)
       xml.dao(atts) {
         xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
@@ -714,7 +713,7 @@ class EADSerializer < ASpaceExport::Serializer
         xml.daodesc{ sanitize_mixed_content(content, xml, fragments, true) } if content
         file_versions_to_display.each do |file_version|
           atts['xlink:type'] = 'locator'
-          atts['xlink:href'] = file_version['file_uri'] 
+          atts['xlink:href'] = file_version['file_uri']
           atts['xlink:role'] = file_version['use_statement'] if file_version['use_statement']
           atts['xlink:title'] = file_version['caption'] if file_version['caption']
           atts['xlink:audience'] = get_audience_flag_for_file_version(file_version)
@@ -766,13 +765,12 @@ class EADSerializer < ASpaceExport::Serializer
   def serialize_dates(obj, xml, fragments)
     obj.archdesc_dates.each do |node_data|
       next if node_data["publish"] === false && !@include_unpublished
-			audatt = node_data["publish"] === false ? {:audience => 'internal'} : {}
-
-			# added
-			encodinganalog = {:encodinganalog=>'245$g'}
-			attributes = {}
-			attributes = attributes.merge(audatt);
-			attributes = attributes.merge(encodinganalog);
+      audatt = node_data["publish"] === false ? {:audience => 'internal'} : {}
+        # added
+        encodinganalog = {:encodinganalog=>'245$g'}
+        attributes = {}
+        attributes = attributes.merge(audatt);
+        attributes = attributes.merge(encodinganalog);
 
 			# modified
 			#xml.unitdate(node_data[:atts].merge(audatt)){
@@ -803,8 +801,7 @@ class EADSerializer < ASpaceExport::Serializer
           }
         }
       when 'physdesc'
-				att[:label] = note['label'] if note['label']
-				#att[:label] = 'Physical Description'
+        att[:label] = note['label'] if note['label']
         xml.send(note['type'], att.merge(audatt)) {
           sanitize_mixed_content(content, xml, fragments,ASpaceExport::Utils.include_p?(note['type']))
         }
@@ -833,7 +830,7 @@ class EADSerializer < ASpaceExport::Serializer
     audatt = note["publish"] === false ? {:audience => 'internal'} : {}
     content = note["content"]
 
-		atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
+    atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
 
 		# added
 		if note['type'] == 'bioghist'
@@ -902,7 +899,7 @@ class EADSerializer < ASpaceExport::Serializer
       head_text = note['label'] ? note['label'] : I18n.t("enumerations._note_types.#{note_type}", :default => note_type )
       audatt = note["publish"] === false ? {:audience => 'internal'} : {}
 
-			atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
+      atts = {:id => prefix_id(note['persistent_id']) }.reject{|k,v| v.nil? || v.empty? || v == "null" }.merge(audatt)
 
       xml.bibliography(atts) {
         xml.head { sanitize_mixed_content(head_text, xml, fragments) }
@@ -958,7 +955,7 @@ class EADSerializer < ASpaceExport::Serializer
                       :dateencoding => "iso8601",
                       :langencoding => "iso639-2b"}.reject{|k,v| v.nil? || v.empty? || v == "null"}
 
-    xml.eadheader(eadheader_atts) { #<eadheader findaidstatus="" repositoryencoding="iso15511"
+    xml.eadheader(eadheader_atts) {
 
       eadid_atts = {:countrycode => data.repo.country,
               :url => data.ead_location,
