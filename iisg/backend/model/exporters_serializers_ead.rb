@@ -171,7 +171,7 @@ class EADSerializer < ASpaceExport::Serializer
             serialize_eadheader(data, xml, new_fragments)
           })
 
-        atts = {:level => data.level, :otherlevel => data.other_level}
+        atts = {:level => data.level, :otherlevel => data.other_level, :type => 'inventory', :relatedencoding => 'MARC21'}
         atts.reject! {|k, v| v.nil?}
 
         xml.archdesc(atts) {
@@ -816,7 +816,6 @@ class EADSerializer < ASpaceExport::Serializer
     end
   end
 
-
   def serialize_did_notes(data, xml, fragments)
     data.notes.each do |note|
       next if note["publish"] === false && !@include_unpublished
@@ -841,18 +840,25 @@ class EADSerializer < ASpaceExport::Serializer
         xml.send(note['type'], att.merge(audatt)) {
           sanitize_mixed_content(content, xml, fragments,ASpaceExport::Utils.include_p?(note['type']))
         }
-			else
-				#
-				if note['type'] == 'abstract'
-					att[:encodinganalog] = '520$a'
-					att[:label] = 'Abstract'
-				end
+      else
+        xml.send(note['type'], att.merge(audatt)) {
+          sanitize_mixed_content(content, xml, fragments,ASpaceExport::Utils.include_p?(note['type']))
+        }
+      end
+    end
+  end
 
-			  #
-				if note['type'] == 'langmaterial'
-					att[:encodinganalog] = '546$a'
-					att[:label] = 'Language of Material'
-				end
+  def serialize_languages(languages, xml, fragments)
+    lm = []
+    language_notes = languages.map {|l| l['notes']}.compact.reject {|e|  e == [] }.flatten
+    if !language_notes.empty?
+      language_notes.each do |note|
+        unless note["publish"] === false && !@include_unpublished
+          audatt = note["publish"] === false ? {:audience => 'internal'} : {}
+          content = ASpaceExport::Utils.extract_note_text(note, @include_unpublished)
+
+          att = { :id => prefix_id(note['persistent_id']) }.reject {|k,v| v.nil? || v.empty? || v == "null" }
+          att ||= {}
 
           xml.send(note['type'], att.merge(audatt)) {
             sanitize_mixed_content(content, xml, fragments, ASpaceExport::Utils.include_p?(note['type']))
@@ -878,7 +884,8 @@ class EADSerializer < ASpaceExport::Serializer
             xml.text(punctuation)
           }
         }
-    # ANW-697: If no Language Text subrecords are available, the Language field translation values for each Language and Script subrecord should be exported, separated by commas, enclosed in <language> elements with associated @langcode and @scriptcode attribute values, and terminated by a period.
+      end
+      # ANW-697: If no Language Text subrecords are available, the Language field translation values for each Language and Script subrecord should be exported, separated by commas, enclosed in <language> elements with associated @langcode and @scriptcode attribute values, and terminated by a period.
     else
       languages = languages.map{|l| l['language_and_script']}.compact
       if !languages.empty?
