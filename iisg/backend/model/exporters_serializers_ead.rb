@@ -878,7 +878,6 @@ class EADSerializer < ASpaceExport::Serializer
             xml.text(punctuation)
           }
         }
-      end
     # ANW-697: If no Language Text subrecords are available, the Language field translation values for each Language and Script subrecord should be exported, separated by commas, enclosed in <language> elements with associated @langcode and @scriptcode attribute values, and terminated by a period.
     else
       languages = languages.map{|l| l['language_and_script']}.compact
