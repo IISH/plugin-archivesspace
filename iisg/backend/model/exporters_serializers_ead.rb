@@ -1042,6 +1042,8 @@ class EADSerializer < ASpaceExport::Serializer
                       :repositoryencoding => "iso15511",
                       :countryencoding => "iso3166-1",
                       :dateencoding => "iso8601",
+                      :scriptencoding => "iso15924",
+                      :relatedencoding => "MARC21",
                       :langencoding => "iso639-2b"}.reject{|k,v| v.nil? || v.empty? || v == "null"}
 
     xml.eadheader(eadheader_atts) {
