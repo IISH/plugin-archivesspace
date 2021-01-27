@@ -155,7 +155,7 @@ class EADSerializer < ASpaceExport::Serializer
       begin
 
       ead_attributes = {
-        'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
+        'xmlns:xsi' => 'https://www.w3.org/2001/XMLSchema-instance',
         'xsi:schemaLocation' => 'urn:isbn:1-931666-22-9 http://www.loc.gov/ead/ead.xsd',
         'xmlns:xlink' => 'http://www.w3.org/1999/xlink'
       }
@@ -1042,6 +1042,8 @@ class EADSerializer < ASpaceExport::Serializer
                       :repositoryencoding => "iso15511",
                       :countryencoding => "iso3166-1",
                       :dateencoding => "iso8601",
+                      :scriptencoding => "iso15924",
+                      :relatedencoding => "MARC21",
                       :langencoding => "iso639-2b"}.reject{|k,v| v.nil? || v.empty? || v == "null"}
 
     xml.eadheader(eadheader_atts) {
