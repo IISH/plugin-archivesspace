@@ -803,7 +803,7 @@ class EADSerializer < ASpaceExport::Serializer
       next if node_data["publish"] === false && !@include_unpublished
       audatt = node_data["publish"] === false ? {:audience => 'internal'} : {}
         # added
-        encodinganalog = {:encodinganalog=>'245$g'}
+        encodinganalog = {:encodinganalog=>'245$f'}
         attributes = {}
         attributes = attributes.merge(audatt);
         attributes = attributes.merge(encodinganalog);
