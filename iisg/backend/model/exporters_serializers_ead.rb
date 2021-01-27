@@ -1037,6 +1037,7 @@ class EADSerializer < ASpaceExport::Serializer
     ark_url = AppConfig[:arks_enabled] ? ArkName::get_ark_url(data.id, :resource) : nil
 
     eadid_url = ark_url.nil? ? data.ead_location : ark_url
+    #    eadid_url = eadid_url.nil? ? eadid_url : eadid_url.sub('http://', 'https://')
 
     eadheader_atts = {:findaidstatus => data.finding_aid_status,
                       :repositoryencoding => "iso15511",
@@ -1048,13 +1049,16 @@ class EADSerializer < ASpaceExport::Serializer
 
     xml.eadheader(eadheader_atts) {
 
+      eadid_identifier = data.ead_id
+      eadid_identifier = eadid_identifier.nil? ? eadid_identifier : eadid_identifier.sub('http://hdl.handle.net/', 'hdl:')
+
       eadid_atts = {:countrycode => data.repo.country,
               :url => eadid_url,
-              :identifier => data.ead_id, # added
+              :identifier => eadid_identifier,
               :mainagencycode => data.mainagencycode}.reject{|k,v| v.nil? || v.empty? || v == "null" }
 
       xml.eadid(eadid_atts) {
-        xml.text data.ead_id
+        xml.text data.ead_id.sub('http://', 'https://')
       }
 
       xml.filedesc {
