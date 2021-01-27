@@ -949,7 +949,11 @@ class EADSerializer < ASpaceExport::Serializer
     head_text = note['label'] ? note['label'] : I18n.t("enumerations._note_types.#{note['type']}", :default => note['type'])
     content, head_text = extract_head_text(content, head_text)
     xml.send(note['type'], atts) {
-      xml.head { sanitize_mixed_content(head_text, xml, fragments) } unless ASpaceExport::Utils.headless_note?(note['type'], content )
+
+      #if note['type'] != 'odd' # geen head bij parent odd tag, of hele head deel weg bij serialize_note_content?
+      #  xml.head { sanitize_mixed_content(head_text, xml, fragments) } unless ASpaceExport::Utils.headless_note?(note['type'], content )
+      #end
+
       sanitize_mixed_content(content, xml, fragments, ASpaceExport::Utils.include_p?(note['type']) ) if content
       if note['subnotes']
         serialize_subnotes(note['subnotes'], xml, fragments, ASpaceExport::Utils.include_p?(note['type']))
