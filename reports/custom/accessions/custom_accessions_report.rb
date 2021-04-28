@@ -1,3 +1,6 @@
+# Extens wordt nu extent_number en extent_type
+# locations_location en location_container
+
 class CustomAccessionsReport < AbstractReport
   register_report(params: [['template', CustomReportTemplate,  'Template.']])
 
@@ -26,24 +29,13 @@ class CustomAccessionsReport < AbstractReport
       general_note,
       container_summary,
       date_expression,
-      begin_date,
-      end_date,
-      bulk_begin_date,
-      bulk_end_date,
       acquisition_type_id as acquisition_type,
-      retention_rule,
       content_description as description_note,
       condition_description as condition_note,
       inventory,
-      disposition as disposition_note,
-      restrictions_apply,
       access_restrictions,
       access_restrictions_note,
-      use_restrictions,
-      use_restrictions_note,
-      ifnull(rights_transferred, false) as rights_transferred,
-      rights_transferred_note,
-      ifnull(acknowledgement_sent, false) as acknowledgement_sent
+      use_restrictions_note
     from accession natural left outer join
 
       (select
@@ -91,7 +83,6 @@ class CustomAccessionsReport < AbstractReport
       where event_link_rlshp.event_id = event.id
         and event.event_type_id = enumeration_value.id and enumeration_value.value = 'acknowledgement_sent'
       group by event_link_rlshp.accession_id) as acknowledgement_sent
-
     where accession.repo_id = #{db.literal(@repo_id)}"
   end
 
@@ -106,11 +97,6 @@ class CustomAccessionsReport < AbstractReport
   end
 
   def add_sub_reports(row)
-    id = row[:accession_id]
-    row[:deaccessions] = AccessionDeaccessionsSubreport.new(self, id).get_content
-    row[:locations] = AccessionLocationsSubreport.new(self, id).get_content
-    row[:names] = AccessionNamesSubreport.new(self, id).get_content
-    row[:subjects] = AccessionSubjectsSubreport.new(self, id).get_content
     row.delete(:accession_id)
   end
 
@@ -133,8 +119,8 @@ class CustomAccessionsReport < AbstractReport
           extent_number = extent_numbers[index]
           label_extent_type = "extent_type_#{index}"
           label_extent_number = "extent_number_#{index}"
-          row[label_extent_type] = extent_type
           row[label_extent_number] = extent_number
+          row[label_extent_type] = extent_type
           extents = index + 1
         rescue Exception => e
           row['error'] = "Missing enum value: #{value}"
@@ -144,8 +130,8 @@ class CustomAccessionsReport < AbstractReport
     (extents..MAX_EXTENTS).each do |index|
       label_extent_type = "extent_type_#{index}"
       label_extent_number = "extent_number_#{index}"
-      row[label_extent_type] = ''
       row[label_extent_number] = 0.0
+      row[label_extent_type] = ''
     end
 
     row.delete(:extent_type)
