@@ -1,6 +1,14 @@
 en:
   reports:
     custom_accessions_report:
-      title: IISG Accessions Report
+      title: IISG Accessions Report 1
       description: Create a custom report by choosing record type, fields, and linked record types.
       identifier_prefix: Accession
+---
+en:
+  custom:
+    reports:
+      custom_accessions_report:
+        title: IISG Accessions Report 2
+        description: Create a custom report by choosing record type, fields, and linked record types.
+        identifier_prefix: Accession

@@ -5,7 +5,7 @@
 set -e
 
 NAMESPACE="$1"
-export NAMESPACE=${NAMESPACE:="archivesspace-acc"}
+export NAMESPACE=${NAMESPACE:="archivesspace"}
 
 # De naam van de backend pod
 tmp=$(/usr/local/bin/kubectl get pods -n "$NAMESPACE"|grep archivesspace-backend)
